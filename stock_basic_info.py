@@ -95,6 +95,21 @@ class StockBasicInfo:
             return result_sql[0][0]
         else:
             return -1
+    def get_PE_dict_by_stock_tuple(self, code_tuple, date):
+        """返回指定code元组，指定日期的pe值
+        input: 股票代码元组序列，日期$
+        output: 如果失败返回-1，如果成功返回该股票序列对应的pe值，
+                dict，key为code，value为pe
+        """
+        pe_dict = {}
+        if len(code_tuple) <= 0:
+            return -1
+        for one in code_tuple:
+            if len(one) <= 0:
+                break
+            else:
+                pe_dict[one[0]] = self.get_PE_by_stock_code(one[0], date)
+        return pe_dict
     
     def get_turnover_GMV_by_stock_code(self, code, date):
         """返回指定code代码+指定日期的成交额
@@ -180,19 +195,18 @@ class StockBasicInfo:
         return profit_total_ratio
 
 if __name__ == '__main__':
-    partitionN = 1
+    partitionN = 4
     stock_test = StockBasicInfo()
     shsz_stock_dict = {}
-    shsz_stock_dict['top1'] = (('SZ.000002', '2018-12-12', 1.0), ('SH.601857', '2018-12-19', 1.0))
-    shsz_stock_dict['top2'] = (('SZ.000001', '2018-12-12', 1.0), ('SH.601398', '2018-12-19', 1.0))
-    print(stock_test.cal_stock_profit_ratio(shsz_stock_dict['top1'], stock_test.start_date, stock_test.end_date))
-    print(stock_test.cal_stock_profit_ratio(shsz_stock_dict['top2'], stock_test.start_date, stock_test.end_date))
-    #shsz_stock_dict = stock_test.get_partition_by_market_value(partitionN)
-    #for one in range(1, partitionN+1):
-    #    index = 'top' + str(one)
-    #    profit_total_ratio = stock_test.cal_stock_profit_ratio( \
-    #            shsz_stock_dict[index], \
-    #            stock_test.start_date, stock_test.end_date)
-    #    print("%s profitratio in %s and %s: %f" %(index, stock_test.start_date, \
-    #                stock_test.end_date, profit_total_ratio))
-    #    print(shsz_stock_dict[index]) 
+    #shsz_stock_dict['top1'] = (('SZ.000002', '2018-12-12', 1.0), ('SH.601857', '2018-12-19', 1.0))
+    #shsz_stock_dict['top2'] = (('SZ.000001', '2018-12-12', 1.0), ('SH.601398', '2018-12-19', 1.0))
+    #print(stock_test.cal_stock_profit_ratio(shsz_stock_dict['top1'], stock_test.start_date, stock_test.end_date))
+    #print(stock_test.cal_stock_profit_ratio(shsz_stock_dict['top2'], stock_test.start_date, stock_test.end_date))
+    shsz_stock_dict = stock_test.get_partition_by_market_value(partitionN)
+    for one in range(1, partitionN+1):
+        index = 'top' + str(one)
+        profit_total_ratio = stock_test.cal_stock_profit_ratio( \
+                shsz_stock_dict[index], \
+                stock_test.start_date, stock_test.end_date)
+        print("%s profitratio in %s and %s: %f" %(index, stock_test.start_date, \
+                    stock_test.end_date, profit_total_ratio))
