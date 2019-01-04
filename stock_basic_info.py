@@ -167,6 +167,54 @@ class StockBasicInfo:
                 return int(volume * 100 / turnover_ratio)
         else:
             return -1
+    
+    def get_normalized_profit_by_stock_code(self, code, start, end):
+        """返回指定code代码+指定日期区间的归一化收益，排除增发影响，排除休市影响
+        input: 股票代码，开始日期，结束日期$
+        output: 如果失败返回-1，如果成功返回该股票归一化收益
+        """
+        run_sql = "select volume,turnover_rate,nclose,time_key from \
+                  stock_day_kline where \
+                  time_key between \'" + start + "\' and \'" + end + "\' and code=\'" \
+                  + code + "\'" + " order by time_key DESC"
+        result_sql = self.nmysql.Query(run_sql)
+        start_issued_shares = 0
+        start_price = 0
+        end_issued_shares = 0
+        end_price = 0
+        if len(result_sql) > 1:
+            start_volume = result_sql[-1][0]
+            start_turnover_ratio = result_sql[-1][1]
+            start_price = result_sql[-1][2]
+            end_volume = result_sql[0][0]
+            end_turnover_ratio = result_sql[0][1]
+            end_price = result_sql[0][2]
+            if start_turnover_ratio <= 0:
+                return -1
+            else:
+                if start_turnover_ratio <= 0 and end_turnover_ratio > 0:
+                    end_issued_shares = int(end_volume / end_turnover_ratio)
+                    start_issued_shares = end_issued_shares
+                elif start_turnover_ratio > 0 and end_turnover_ratio <= 0:
+                    start_issued_shares = int(start_volume / start_turnover_ratio)
+                    end_issued_shares = start_issued_shares
+                elif start_turnover_ratio <= 0 and end_turnover_ratio <= 0:
+                    return -1
+                else:
+                    start_issued_shares = int(start_volume / start_turnover_ratio)
+                    end_issued_shares = int(end_volume / end_turnover_ratio)
+        else:
+            return -1
+        if start_issued_shares <= 0 or start_price <= 0:
+            return -1
+        else:
+            #print("start_issued_shares:%d start_price:%s end_issued_shares:%d \
+            #     end_price:%s" %(start_issued_shares, start_price, \
+            #     end_issued_shares, end_price))
+            #print((end_issued_shares / start_issued_shares) *\
+            #     (end_price - start_price) / start_price)
+            return (end_issued_shares / start_issued_shares) * \
+                   (end_price - start_price) / start_price
 
 
     def cal_stock_profit_ratio(self, stock_tuple, start, end):
@@ -175,28 +223,24 @@ class StockBasicInfo:
         output: 如果失败返回-1，如果成功返回该序列收益率，每只股票的都按照1元买入
         """
         total = 0
+        wight = 1
         for one in stock_tuple:
-            run_sql="select nclose from stock_day_kline where time_key \
-                    between \'" + start + "\' and \'" + end + "\' and code=\'" + \
-                    one[0] + "\'"
-            result_sql=sorted(self.nmysql.Query(run_sql))
-            if len(result_sql) == 0:
+            profit_ratio_one = self.get_normalized_profit_by_stock_code( \
+                               one[0], start, end)
+            if profit_ratio_one == -1:
                 continue
-            if result_sql[0][0] == 0:
-                continue
-            profit_one=(float(result_sql[-1][0]) - \
-                    float(result_sql[0][0])) / float(result_sql[0][0])
-            total += profit_one
-            #print("start=%s end=%s start_nclose=%s end_nclose=%s \
-            #        profit=%s total=%s" %(start, end, result_sql[0][0], \
-            #        result_sql[-1][0], profit_one, total))
+            total += profit_ratio_one * wight
+            #print("code=%s,start=%s end=%s\ profit=%s total=%s" %(one[0], \
+            #      start, end, profit_ratio_one, total))
         profit_total_ratio = total / len(stock_tuple)
         #print("profit_total_ratio=%s" %(profit_total_ratio))
         return profit_total_ratio
 
 if __name__ == '__main__':
-    partitionN = 4
+    partitionN = 10
     stock_test = StockBasicInfo()
+    #print(stock_test.get_normalized_profit_by_stock_code("SH.601398", '2018-12-17', '2019-01-01'))
+    #print(stock_test.get_normalized_profit_by_stock_code("SH.601398", '2018-12-29', '2019-01-01'))
     shsz_stock_dict = {}
     #shsz_stock_dict['top1'] = (('SZ.000002', '2018-12-12', 1.0), ('SH.601857', '2018-12-19', 1.0))
     #shsz_stock_dict['top2'] = (('SZ.000001', '2018-12-12', 1.0), ('SH.601398', '2018-12-19', 1.0))
