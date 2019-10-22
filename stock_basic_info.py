@@ -30,17 +30,19 @@ class StockBasicInfo:
                 self.market_value_blank_back_day - 1)
         self.end_date=self.nmysql.getDate(0)
 
-    def get_SHSZcode_order_by_market_value(self):
+    def get_SHSZcode_order_by_market_value(self, date):
         """返回深圳和上海所有股票的代码，按照市值降序
         input: NULL
         output: 如果失败返回-1，如果成功返回tuple股票代码序列
         """
-        tmv=self.nmysql.Query('select sms.code,sms.update_time, \
+        query = "select sms.code,sms.update_time, \
                 sms.circular_market_val from stock_market_snapshot as \
                 sms join stock_uid_info as sui on \
-                sms.code=sui.code where sui.market_code="SH.3000005" and \
-                sms.circular_market_val != 0 order by \
-                sms.circular_market_val DESC')
+                sms.code=sui.code where sui.market_code='SH.3000005' and \
+                sms.update_time=" + date + 
+                "sms.circular_market_val != 0 order by \
+                sms.circular_market_val DESC"
+        tmv=self.nmysql.Query(query)
         if len(tmv) <= 0:
             return -1
         else:
